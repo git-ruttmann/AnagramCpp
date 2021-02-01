@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30907.101
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AnagramCuda", "AnagramCuda\AnagramCuda.vcxproj", "{D25A9D40-37C0-4B24-831F-2E3180538A50}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D25A9D40-37C0-4B24-831F-2E3180538A50}.Debug|x64.ActiveCfg = Debug|x64
+		{D25A9D40-37C0-4B24-831F-2E3180538A50}.Debug|x64.Build.0 = Debug|x64
+		{D25A9D40-37C0-4B24-831F-2E3180538A50}.Release|x64.ActiveCfg = Release|x64
+		{D25A9D40-37C0-4B24-831F-2E3180538A50}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {81B71FA2-F295-44AF-AB1C-F257CCDF9BC5}
+	EndGlobalSection
+EndGlobal
