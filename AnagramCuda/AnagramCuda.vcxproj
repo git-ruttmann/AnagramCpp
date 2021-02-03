@@ -83,7 +83,9 @@
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AnalyzedWord.h" />
     <ClInclude Include="CudaInputArray.h" />
+    <ClInclude Include="PartialAnagram.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
