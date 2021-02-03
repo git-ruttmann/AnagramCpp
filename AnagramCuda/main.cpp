@@ -1,8 +1,3 @@
-﻿
-#if false
-
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
 
 #include <stdio.h>
 #include <cstdint>
@@ -93,7 +88,7 @@ struct AnalyzedWord
                 {
                     checkCharacters[checkCharacterCount++] = ci;
                 }
-                
+
                 counts[ci]++;
 
                 auto cu = std::min(ci, (char)31);
@@ -125,7 +120,7 @@ struct AnalyzedWord
             {
                 return false;
             }
-            
+
             usedMask |= 1 << (std::min(ci, (char)31));
             if (remaining[ci] > 1)
             {
@@ -211,7 +206,6 @@ struct partialAnagramEntry
     /// <summary>
     /// join existing data with a new word
     /// </summary>
-    __host__ __device__
     void joinWord(const partialAnagramEntry& entry, const AnalyzedWord& word, int index)
     {
         previousEntry = index;
@@ -232,21 +226,14 @@ struct partialAnagramEntry
 constexpr auto outputSizeBuffer = 512;
 struct Soutput
 {
-    int outputCount;
-    int overflow;
-    int resultCount;
     int callCount;
-    int results[outputSizeBuffer];
-    partialAnagramEntry output[outputSizeBuffer + cudaThreadCount];
+    std::vector<int> results;
+    std::vector<partialAnagramEntry> outputs;
 };
 
-__device__ __host__ void doHandleBlock(const AnalyzedWord word, int index, const partialAnagramEntry & entry, Soutput* output)
+void doHandleBlock(const AnalyzedWord word, int index, const partialAnagramEntry& entry, Soutput* output, std::mutex & m)
 {
-#ifdef  __CUDA_ARCH__
-    atomicAdd(&output->callCount, 1);
-#else
     output->callCount++;
-#endif
 
     if (entry.doNotUseMask & word.usedMask)
     {
@@ -270,48 +257,22 @@ __device__ __host__ void doHandleBlock(const AnalyzedWord word, int index, const
 
     if (maskOfSum == 0)
     {
-#ifdef  __CUDA_ARCH__
-        auto resultIndex = atomicAdd(&output->resultCount, 1);
-#else
-        auto resultIndex = output->resultCount++;
-#endif
-        if (resultIndex >= outputSizeBuffer)
-        {
-            output->overflow = true;
-            return;
-        }
-
-        // valid result
-        output->results[resultIndex] = index;
+        std::lock_guard<std::mutex> guard(m);
+        output->results.emplace_back(index);
     }
     else if ((maskOfSum > 0) && (entry.restLength - word.length > 2))
     {
-        // valid combination
-#ifdef  __CUDA_ARCH__
-        auto& target = output->output[atomicAdd(&output->outputCount, 1)];
-#else
-        auto& target = output->output[output->outputCount++];
-#endif
-        if (output->outputCount >= outputSizeBuffer + cudaThreadCount)
+        size_t resultIndex;
         {
-            output->overflow = true;
-            return;
+            std::lock_guard<std::mutex> guard(m);
+            resultIndex = output->outputs.size();
+            output->outputs.resize(output->outputs.size() + 1);
         }
 
+        // valid combination
+        auto& target = output->outputs[resultIndex];
         target.joinWord(entry, word, index);
     }
-}
-
-__global__ void handleBlock(const AnalyzedWord* word, int max, const partialAnagramEntry* block, Soutput * output)
-{
-    const auto index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index >= max)
-    {
-        return;
-    }
-
-    const partialAnagramEntry& entry = block[index];
-    doHandleBlock(*word, index, entry, output);
 }
 
 using AnagramBlock = CudaInputArray<partialAnagramEntry>;
@@ -339,7 +300,7 @@ void reportResult(int wordId, int moreResults)
 Soutput g_output;
 int totalResults;
 long long totalCalls = 0;
-cudaError_t cudaAnagram(AnalyzedWord* word, AnagramBlock & block, Soutput* output);
+cudaError_t cudaAnagram(AnalyzedWord* word, AnagramBlock& block, Soutput* output);
 void handleOutputBlock(const AnalyzedWord* word, AnagramBlock& block, Soutput* output);
 
 int main()
@@ -366,7 +327,7 @@ int main()
 
         if (current.initWord(anagram, s))
         {
-//            std::cerr << "consider " << s << std::endl;
+            //            std::cerr << "consider " << s << std::endl;
             current.wordId = (decltype(current.wordId))strings.size();
             strings.emplace_back(std::move(s));
 
@@ -376,47 +337,32 @@ int main()
                 continue;
             }
 
-            g_output.resultCount = 0;
-            g_output.outputCount = 0;
-            g_output.overflow = 0;
-#if false
-            auto cudaStatus = cudaAnagram(&current, parts, &g_output);
-            if (cudaStatus != cudaSuccess)
+            std::mutex m;
+            auto& a = parts.data;
+            auto executor = [&](const auto& value)
             {
-                std::cerr << "cudaAnagram failed " << cudaStatus << std::endl;
-                return 1;
+                int idx = (int)(&value - &a[0]);
+                doHandleBlock(current, idx, value, &g_output, m);
+            };
+#if true
+            if (a.size() < 1000000)
+            {
+                std::for_each(std::execution::seq, std::begin(a), std::end(a), executor);
+            }
+            else
+            {
+                std::for_each(std::execution::par_unseq, std::begin(a), std::end(a), executor);
             }
 #else
-            auto& a = parts.data;
-            std::mutex m;
-            std::for_each(
-                std::execution::par_unseq,
-                std::begin(a), 
-                std::end(a), 
-                [&m, &current](auto & value)
-                {
-                    {
-                        std::lock_guard<std::mutex> guard(m);
-                        totalCalls++;
-                    }
-
-                    int idx = 0;
-                    doHandleBlock(current, idx, value, &g_output);
-                });
-
             auto end = parts.data.size();
             for (size_t i = 0; i < end; i++)
             {
                 totalCalls++;
-                doHandleBlock(current, i, parts.data[i], &g_output);
-                if (g_output.outputCount > outputSizeBuffer)
-                {
-                    handleOutputBlock(&current, parts, &g_output);
-                }
+                doHandleBlock(current, i, parts.data[i], &g_output, m);
             }
+#endif
 
             handleOutputBlock(&current, parts, &g_output);
-#endif
             parts.data.emplace_back(current);
         }
     }
@@ -424,94 +370,16 @@ int main()
     std::cout << "found " << totalResults << " " << parts.data.size() << " " << totalCalls << " " << g_output.callCount << std::endl;
 }
 
-template<typename T>
-void uploadToCuda(cudaError_t& error, T& devicePtr, const T data)
-{
-    if (error != cudaSuccess)
-    {
-        return;
-    }
-
-    constexpr auto size = sizeof(decltype(*devicePtr));
-    error = cudaMalloc((void**)&devicePtr, size);
-    if (error != cudaSuccess)
-    {
-        return;
-    }
-
-    error = cudaMemcpy(devicePtr, data, size, cudaMemcpyHostToDevice);
-}
-
 void handleOutputBlock(const AnalyzedWord* word, AnagramBlock& block, Soutput* output)
 {
-    if (output->overflow)
-    {
-        reportResult(word->wordId, -1);
-        std::cerr << "Too many results: " << output->outputCount << " " << output->resultCount << std::endl;
-    }
+    parts.data.insert(parts.data.end(), output->outputs.begin(), output->outputs.end());
 
-    for (size_t i = 0; i < std::min(outputSizeBuffer + cudaThreadCount, output->outputCount); i++)
-    {
-        parts.data.push_back(output->output[i]);
-    }
-
-    for (size_t i = 0; i < std::min(outputSizeBuffer, output->resultCount); i++)
+    for (auto result: output->results)
     {
         totalResults++;
-        reportResult(word->wordId, output->results[i]);
+        reportResult(word->wordId, result);
     }
 
-    output->resultCount = 0;
-    output->outputCount = 0;
+    output->outputs.resize(0);
+    output->results.resize(0);
 }
-
-cudaError_t cudaAnagram(AnalyzedWord* word, AnagramBlock& block, Soutput* output)
-{
-    AnalyzedWord* dev_word = NULL;
-    Soutput* dev_output = NULL;
-
-    // Choose which GPU to run on, change this on a multi-GPU system.
-    auto cudaStatus = cudaSetDevice(0);
-    if (cudaStatus != cudaSuccess) {
-        std::cerr << "cudaSetDevice failed!  Do you have a CUDA-capable GPU installed?" << std::endl;
-        return cudaStatus;
-    }
-
-    constexpr auto oututExchangeSize = 16;
-    uploadToCuda(cudaStatus, dev_word, word);
-    uploadToCuda(cudaStatus, dev_output, output);
-    block.Upload();
-
-#if false
-    auto blockSize = block.data.size();
-    for (size_t offset = 0; offset < blockSize; offset += cudaThreadCount)
-    {
-        auto count = std::min(blockSize - offset, cudaThreadCount);
-        handleBlock<<<1, count>>> (dev_word, block.dev_memory + offset, dev_output);
-        cudaStatus = cudaDeviceSynchronize();
-
-        // copy only the counters and do intermediate reporting
-        cudaMemcpy(output, dev_output, oututExchangeSize, cudaMemcpyDeviceToHost);
-        if (output->outputCount >= outputSizeBuffer || output->resultCount >= outputSizeBuffer)
-        {
-            cudaStatus = cudaMemcpy(output, dev_output, sizeof(Soutput), cudaMemcpyDeviceToHost);
-            handleOutputBlock(word, block, output);
-            cudaStatus = cudaMemcpy(output, dev_output, oututExchangeSize, cudaMemcpyHostToDevice);
-        }
-    }
-#else
-    handleBlock<<<block.data.size() / cudaThreadCount + 1, cudaThreadCount>>>(
-        dev_word, block.data.size(), block.dev_memory, dev_output);
-#endif
-
-    cudaStatus = cudaDeviceSynchronize();
-    cudaStatus = cudaMemcpy(output, dev_output, sizeof(Soutput), cudaMemcpyDeviceToHost);
-    handleOutputBlock(word, block, output);
-
-    cudaFree(dev_word);
-    cudaFree(dev_output);
-
-    return cudaStatus;
-}
-
-#endif
