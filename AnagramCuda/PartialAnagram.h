@@ -40,7 +40,7 @@ struct partialAnagramEntry
     /// <summary>
     /// total sum of characters
     /// </summary>
-    int32_t restLength;
+    size_t restLength;
 
     /// <summary>
     /// copy data from an analysed word
@@ -51,17 +51,20 @@ struct partialAnagramEntry
         memcpy(&counts, word.remaining, sizeof(counts));
         doNotUseMask = ~word.remainingMask;
         wordId = word.wordId;
+        restLength = word.restLength;
         previousEntry = -1;
     }
 
     /// <summary>
     /// join existing data with a new word
     /// </summary>
-    void joinWord(const partialAnagramEntry& entry, const AnalyzedWord& word, int index)
+    void joinWord(const partialAnagramEntry& entry, const AnalyzedWord& word, int previous)
     {
-        previousEntry = index;
+        previousEntry = previous;
         doNotUseMask = entry.doNotUseMask;
         wordId = word.wordId;
+        restLength = entry.restLength - word.length;
+
         for (int i = 0; i < possibleCharacterCount; i++)
         {
             auto count = entry.counts[i] - word.counts[i];
