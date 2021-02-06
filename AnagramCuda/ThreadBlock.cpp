@@ -7,6 +7,10 @@ ThreadBlock::ThreadBlock()
     m_dataReady = false;
     m_dataCompleted = false;
     m_thread = std::thread([this] { this->RunThread(); });
+
+    perfcount1 = 0;
+    perfcount2 = 0;
+    perfcount3 = 0;
 }
 
 ThreadBlock::ThreadBlock(ThreadBlock&& other) noexcept
@@ -16,6 +20,10 @@ ThreadBlock::ThreadBlock(ThreadBlock&& other) noexcept
     m_dataReady = false;
     m_dataCompleted = false;
     m_thread = std::move(other.m_thread);
+
+    perfcount1 = 0;
+    perfcount2 = 0;
+    perfcount3 = 0;
 }
 
 void ThreadBlock::RunThread()
@@ -80,9 +88,17 @@ void ThreadBlock::ProcessBlock(size_t startOffset)
     auto arraySize = m_data->size();
     for (size_t i = startOffset; i < arraySize; i++)
     {
+        perfcount1++;
         const auto& entry = (*m_data)[i];
+        if (entry.restLength < word.length)
+        {
+            perfcount2++;
+            continue;
+        }
+
         if (entry.doNotUseMask & word.usedMask)
         {
+            perfcount3++;
             continue;
         }
 

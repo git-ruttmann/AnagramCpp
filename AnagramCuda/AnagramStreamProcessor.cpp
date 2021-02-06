@@ -3,12 +3,15 @@
 #include <iostream>
 #include <string>
 
+#include <numeric>
+
 #include "AnagramStreamProcessor.h"
 
 AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, int threadCount)
 {
     anagram.initAnagram(anagramText);
     threads.resize(threadCount);
+    resultCount = 0;
 }
 
 void AnagramStreamProcessor::ProcessStream(std::ifstream& stream)
@@ -40,6 +43,13 @@ void AnagramStreamProcessor::ProcessStream(std::ifstream& stream)
     ExecuteThreads(wordIndex);
 
     std::for_each(threads.begin(), threads.end(), [](ThreadBlock& thread) { thread.TerminateThread(); });
+
+    std::cout << "1: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount1; }) << std::endl;
+    std::cout << "2: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount2; }) << std::endl;
+    std::cout << "3: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount3; }) << std::endl;
+    std::cout << "s: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount1 - block.perfcount2 - block.perfcount3; }) << std::endl;
+    std::cout << "c: " << parts.size() << std::endl;
+    std::cout << "r: " << resultCount << std::endl;
 }
 
 void AnagramStreamProcessor::ExecuteThreads(size_t count)
@@ -89,6 +99,7 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
 
 void AnagramStreamProcessor::report(int wordId, int moreResults)
 {
+    resultCount++;
     std::vector<int> wordIds{ wordId };
     while (moreResults >= 0)
     {

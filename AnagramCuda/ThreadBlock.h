@@ -38,6 +38,10 @@ public:
 
     AnalyzedWord m_word;
 
+    int perfcount1;
+    int perfcount2;
+    int perfcount3;
+
 private:
     void RunThread();
     void ProcessBlock(size_t startOffset);
