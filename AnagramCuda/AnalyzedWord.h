@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ctype.h>
+
 /// <summary>
 /// Number of possible input chars. 0-9 and A-Z
 /// </summary>

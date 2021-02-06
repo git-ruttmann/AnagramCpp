@@ -83,12 +83,16 @@
     <CudaCompile Include="kernel.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AnagramStreamProcessor.h" />
     <ClInclude Include="AnalyzedWord.h" />
     <ClInclude Include="CudaInputArray.h" />
     <ClInclude Include="PartialAnagram.h" />
+    <ClInclude Include="ThreadBlock.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AnagramStreamProcessor.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ThreadBlock.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
