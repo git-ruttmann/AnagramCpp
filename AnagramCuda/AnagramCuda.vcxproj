@@ -80,9 +80,6 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="AnagramStreamProcessor.h" />
     <ClInclude Include="AnalyzedWord.h" />
     <ClInclude Include="CudaInputArray.h" />
