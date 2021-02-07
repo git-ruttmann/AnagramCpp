@@ -42,12 +42,12 @@ struct AnalyzedWord
     /// <summary>
     /// the length of the word
     /// </summary>
-    size_t length;
+    int32_t length;
 
     /// <summary>
     /// the length until the anagram is fullfilled
     /// </summary>
-    size_t restLength;
+    int32_t restLength;
 
     /// <summary>
     /// The remaining count per character to fullfill the anagram
@@ -65,14 +65,14 @@ struct AnalyzedWord
     {
         memset(&counts, 0, sizeof(counts));
         usedMask = 0;
-        length = text.size();
-        restLength = length;
+        length = 0;
         checkCharacterCount = 0;
 
         for (auto c : text)
         {
             if (isalnum(c))
             {
+                length++;
                 auto ci = toIndex(c);
                 if (counts[ci] == 0)
                 {
@@ -88,6 +88,7 @@ struct AnalyzedWord
 
         memcpy(&remaining, counts, sizeof(counts));
         remainingMask = usedMask;
+        restLength = length;
     }
 
     bool initWord(const AnalyzedWord& anagram, const std::string& text)
@@ -98,7 +99,7 @@ struct AnalyzedWord
         usedMask = 0;
         checkCharacterCount = anagram.checkCharacterCount;
         memcpy(checkCharacters, anagram.checkCharacters, sizeof(checkCharacters));
-        length = text.size();
+        length = (int)text.size();
         restLength = anagram.length - length;
 
         for (auto c : text)

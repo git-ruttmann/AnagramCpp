@@ -1,6 +1,7 @@
 #include "ThreadBlock.h"
 
 ThreadBlock::ThreadBlock()
+    : m_minimumWordLength(2)
 {
     m_data = NULL;
     m_finishThread = false;
@@ -13,13 +14,28 @@ ThreadBlock::ThreadBlock()
     perfcount3 = 0;
 }
 
+ThreadBlock::~ThreadBlock() noexcept
+{
+    {
+        std::lock_guard guard(m_lock);
+        m_data = NULL;
+        m_finishThread = true;
+        m_dataReadyCondition.notify_one();
+    }
+
+    m_thread.join();
+}
+
 ThreadBlock::ThreadBlock(ThreadBlock&& other) noexcept
+    : m_minimumWordLength(2)
 {
     m_data = NULL;
     m_finishThread = false;
     m_dataReady = false;
     m_dataCompleted = false;
-    m_thread = std::move(other.m_thread);
+    m_thread = std::thread([this] { this->RunThread(); });
+
+    other.m_finishThread = true;
 
     perfcount1 = 0;
     perfcount2 = 0;
@@ -38,7 +54,7 @@ void ThreadBlock::RunThread()
 
         if (!m_finishThread)
         {
-            ProcessBlock(0);
+            ProcessAllBlocks();
         }
 
         {
@@ -49,7 +65,7 @@ void ThreadBlock::RunThread()
     }
 }
 
-void ThreadBlock::ScanBlockInThread(const std::vector<partialAnagramEntry>& data)
+void ThreadBlock::ScanBlockInThread(const std::vector<std::vector<partialAnagramEntry>>& data)
 {
     std::lock_guard guard(m_lock);
     m_data = &data;
@@ -78,44 +94,92 @@ void ThreadBlock::TerminateThread()
 
 void ThreadBlock::CombineBlock(const std::vector<partialAnagramEntry>& data, size_t startOffset)
 {
-    m_data = &data;
-    ProcessBlock(startOffset);
+    ProcessList(m_word, data, startOffset);
 }
 
-void ThreadBlock::ProcessBlock(size_t startOffset)
+inline bool EntryIsComplete(const partialAnagramEntry& entry, const AnalyzedWord& word)
+{
+    for (size_t i = 0; i < possibleCharacterCount; i++)
+    {
+        if (entry.counts[i] != word.counts[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+inline bool EntryIsPart(const partialAnagramEntry& entry, const AnalyzedWord& word)
+{
+    for (size_t i = 0; i < possibleCharacterCount; i++)
+    {
+        if (entry.counts[i] < word.counts[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<partialAnagramEntry>& list, size_t start)
+{
+    const auto listSize = list.size();
+    if (listSize <= start)
+    {
+        return;
+    }
+
+    auto restLength = list.front().restLength;
+    if (restLength == word.length)
+    {
+        for (size_t i = start; i < listSize; i++)
+        {
+//            perfcount1++;
+            const auto& entry = list[i];
+            if (entry.doNotUseMask & word.usedMask)
+            {
+                continue;
+            }
+
+            perfcount2++;
+            if (EntryIsComplete(entry, word))
+            {
+                m_resultWordId.emplace_back((int)i);
+                m_resultWordLength.emplace_back(restLength);
+            }
+        }
+    }
+    else if (restLength >= word.length + m_minimumWordLength)
+    {
+        for (size_t i = start; i < listSize; i++)
+        {
+            perfcount1++;
+            const auto& entry = list[i];
+            if (entry.doNotUseMask & word.usedMask)
+            {
+                continue;
+            }
+
+            perfcount3++;
+            if (EntryIsPart(entry, word))
+            {
+                m_generatedEntries.resize(m_generatedEntries.size() + 1);
+                m_generatedEntries.back().joinWord(entry, word, (int)i);
+            }
+        }
+    }
+}
+
+void ThreadBlock::ProcessAllBlocks()
 {
     const auto& word = m_word;
-    auto arraySize = m_data->size();
-    for (size_t i = startOffset; i < arraySize; i++)
+    const auto anagramLength = m_data->size();
+
+    for (int32_t restLength = m_minimumWordLength; restLength < anagramLength; restLength++)
     {
-        perfcount1++;
-        const auto& entry = (*m_data)[i];
-        if (entry.restLength < word.length)
-        {
-            perfcount2++;
-            continue;
-        }
-
-        if (entry.doNotUseMask & word.usedMask)
-        {
-            perfcount3++;
-            continue;
-        }
-
-        usedCharacterCount_t maskOfSum = 0;
-        for (size_t j = 0; j < possibleCharacterCount; j++)
-        {
-            maskOfSum |= (entry.counts[j] - word.counts[j]);
-        }
-
-        if (maskOfSum == 0)
-        {
-            m_results.emplace_back((int)i);
-        }
-        else if ((maskOfSum > 0) && (entry.restLength - word.length > 2))
-        {
-            m_generatedEntries.resize(m_generatedEntries.size() + 1);
-            m_generatedEntries.back().joinWord(entry, word, (int)i);
-        }
+        const auto& dataWithLength = m_data->at(restLength);
+        ProcessList(m_word, m_data->at(restLength), 0);
     }
 }

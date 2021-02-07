@@ -10,11 +10,17 @@
 AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, int threadCount)
 {
     anagram.initAnagram(anagramText);
-    threads.resize(threadCount);
+    threads.reserve(threadCount);
+    for (size_t i = 0; i < threadCount; i++)
+    {
+        threads.emplace_back(ThreadBlock());
+    }
+
+    partsByLength.resize(anagram.length);
     resultCount = 0;
 }
 
-void AnagramStreamProcessor::ProcessStream(std::ifstream& stream)
+void AnagramStreamProcessor::ProcessStream(std::istream& stream)
 {
     std::string s;
     size_t wordIndex = 0;
@@ -48,7 +54,17 @@ void AnagramStreamProcessor::ProcessStream(std::ifstream& stream)
     std::cout << "2: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount2; }) << std::endl;
     std::cout << "3: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount3; }) << std::endl;
     std::cout << "s: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount1 - block.perfcount2 - block.perfcount3; }) << std::endl;
-    std::cout << "c: " << parts.size() << std::endl;
+
+    std::cout << "t:";
+    size_t lengthSum = 0;
+    for (const auto & partialLength : partsByLength)
+    {
+        std::cout << " " << partialLength.size();
+        lengthSum += partialLength.size();
+    }
+    std::cout << " t: " << lengthSum << std::endl;
+
+    // std::cout << "c: " << parts.size() << std::endl;
     std::cout << "r: " << resultCount << std::endl;
 }
 
@@ -63,7 +79,7 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
     for (size_t i = 0; i < count; i++)
     {
         auto& thread = threads[i];
-        thread.ScanBlockInThread(parts);
+        thread.ScanBlockInThread(partsByLength);
     }
 
     // wait until each thread is completed, do not modify the parts during the parallel phase
@@ -76,35 +92,51 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
     }
 
     // each word also must be combined with the previous words from the other threads
-    std::vector<int> results(threads[0].m_results);
-    auto startIndex = parts.size();
+    std::vector<size_t> handledIndizis;
+    for (const auto& part : partsByLength)
+    {
+        handledIndizis.push_back(part.size());
+    }
+
     for (size_t i = 0; i < count; i++)
     {
         auto& thread = threads[i];
-        thread.CombineBlock(parts, startIndex);
-        parts.insert(parts.end(), thread.m_generatedEntries.begin(), thread.m_generatedEntries.end());
-
-        parts.resize(parts.size() + 1);
-        parts.back().initFromAnalyzedWord(thread.m_word);
-
-        for (auto result : thread.m_results)
+        for (size_t j = 0; j < partsByLength.size(); j++)
         {
-            report(thread.m_word.wordId, result);
+            thread.CombineBlock(partsByLength[j], handledIndizis[j]);
+        }
+
+        for (size_t j = 0; j < thread.m_generatedEntries.size(); j++)
+        {
+            const auto& entry = thread.m_generatedEntries[j];
+            partsByLength[entry.restLength].push_back(entry);
+        }
+
+        auto& lengthData = partsByLength[thread.m_word.restLength];
+        lengthData.resize(lengthData.size() + 1);
+        lengthData.back().initFromAnalyzedWord(thread.m_word);
+
+        for (size_t j = 0; j < thread.m_resultWordId.size(); j++)
+        {
+            report(thread.m_word.wordId, thread.m_resultWordId[j], thread.m_resultWordLength[j]);
         }
 
         thread.m_generatedEntries.resize(0);
-        thread.m_results.resize(0);
+        thread.m_resultWordId.resize(0);
+        thread.m_resultWordLength.resize(0);
     }
 }
 
-void AnagramStreamProcessor::report(int wordId, int moreResults)
+void AnagramStreamProcessor::report(int wordId, int moreResults, int moreLength)
 {
     resultCount++;
     std::vector<int> wordIds{ wordId };
     while (moreResults >= 0)
     {
-        wordIds.push_back(parts[moreResults].wordId);
-        moreResults = parts[moreResults].previousEntry;
+        const auto& entry = partsByLength[moreLength][moreResults];
+        wordIds.push_back(entry.wordId);
+        moreResults = entry.previousEntry;
+        moreLength = entry.previousLength;
     }
 
     return;

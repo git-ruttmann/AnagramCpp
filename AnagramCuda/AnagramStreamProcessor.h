@@ -9,18 +9,18 @@
 class AnagramStreamProcessor
 {
 public:
-    AnagramStreamProcessor(const std::string& anagramText, int threadCount = 8);
+    AnagramStreamProcessor(const std::string& anagramText, int threadCount = 16);
 
-    void ProcessStream(std::ifstream& stream);
+    void ProcessStream(std::istream& stream);
 
 private:
     void ExecuteThreads(size_t count);
 
-    void report(int wordId, int moreResults);
+    void report(int wordId, int moreResults, int moreLength);
 
     int resultCount;
     AnalyzedWord anagram;
     std::vector<std::string> m_strings;
-    std::vector<partialAnagramEntry> parts;
+    std::vector<std::vector<partialAnagramEntry>> partsByLength;
     std::vector<ThreadBlock> threads;
 };

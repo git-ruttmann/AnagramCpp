@@ -12,13 +12,14 @@ class ThreadBlock
 public:
     ThreadBlock();
     ThreadBlock(ThreadBlock&& other) noexcept;
+    ~ThreadBlock();
 
     /// <summary>
     /// combining the search word with every entry in the data block. Run in a separate thread.
     /// </summary>
     /// <param name="word">the search word</param>
     /// <param name="data">the data block. MUST NOT MODIFY until WaitForResult returns</param>
-    void ScanBlockInThread(const std::vector<partialAnagramEntry>& data);
+    void ScanBlockInThread(const std::vector< std::vector<partialAnagramEntry>>& data);
 
     void WaitForResult();
 
@@ -34,7 +35,8 @@ public:
     /// <summary>
     /// indizes in data that form a valid result together with the currently scanned word
     /// </summary>
-    std::vector<int> m_results;
+    std::vector<int> m_resultWordLength;
+    std::vector<int> m_resultWordId;
 
     AnalyzedWord m_word;
 
@@ -44,11 +46,13 @@ public:
 
 private:
     void RunThread();
-    void ProcessBlock(size_t startOffset);
+    void ProcessAllBlocks();
+    void ProcessList(const AnalyzedWord& word, const std::vector<partialAnagramEntry>& list, size_t start);
 
-    const std::vector<partialAnagramEntry>* m_data;
+    const std::vector<std::vector<partialAnagramEntry>>* m_data;
     bool m_dataReady;
     bool m_dataCompleted;
+    const int m_minimumWordLength;
 
     std::mutex m_lock;
     std::condition_variable m_dataReadyCondition;

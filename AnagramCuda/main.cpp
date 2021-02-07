@@ -5,6 +5,7 @@
 
 int main()
 {
+    //std::ifstream infile("C:\\Users\\Ruttmann\\source\\repos\\AnagramCuda\\wordlist.txt");
     std::ifstream infile("C:\\Users\\Ruttmann\\source\\repos\\AnagramCuda\\wordlist.txt");
     AnagramStreamProcessor controller("Best Secret Aschheim");
 //    AnagramStreamProcessor controller("Best Secret Asch");

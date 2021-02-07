@@ -83,6 +83,7 @@
     <ClInclude Include="AnagramStreamProcessor.h" />
     <ClInclude Include="AnalyzedWord.h" />
     <ClInclude Include="CudaInputArray.h" />
+    <ClInclude Include="Options.h" />
     <ClInclude Include="PartialAnagram.h" />
     <ClInclude Include="ThreadBlock.h" />
   </ItemGroup>

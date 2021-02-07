@@ -28,6 +28,11 @@ struct partialAnagramEntry
     int32_t previousEntry;
 
     /// <summary>
+    /// The length container of the previous entry
+    /// </summary>
+    int32_t previousLength;
+
+    /// <summary>
     /// The id of the word in a global array
     /// </summary>
     int32_t wordId;
@@ -40,7 +45,7 @@ struct partialAnagramEntry
     /// <summary>
     /// total sum of characters
     /// </summary>
-    size_t restLength;
+    int32_t restLength;
 
     /// <summary>
     /// copy data from an analysed word
@@ -61,6 +66,8 @@ struct partialAnagramEntry
     void joinWord(const partialAnagramEntry& entry, const AnalyzedWord& word, int previous)
     {
         previousEntry = previous;
+        previousLength = entry.restLength;
+
         doNotUseMask = entry.doNotUseMask;
         wordId = word.wordId;
         restLength = entry.restLength - word.length;
