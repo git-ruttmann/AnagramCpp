@@ -18,6 +18,13 @@ AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, i
 
     partsByLength.resize(anagram.length);
     resultCount = 0;
+    performance4 = 0;
+
+    // this is a handcrafted optimization to reduce reallocation
+    for (size_t i = 2; i < anagram.length; i++)
+    {
+        partsByLength[i].reserve(i < 6 ? 1000000 : (i < 10 ? 50000 : 10000));
+    }
 }
 
 void AnagramStreamProcessor::ProcessStream(std::istream& stream)
@@ -66,6 +73,7 @@ void AnagramStreamProcessor::ProcessStream(std::istream& stream)
 
     // std::cout << "c: " << parts.size() << std::endl;
     std::cout << "r: " << resultCount << std::endl;
+    std::cout << "p4:" << performance4 << std::endl;
 }
 
 void AnagramStreamProcessor::ExecuteThreads(size_t count)
@@ -109,6 +117,12 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
         for (size_t j = 0; j < thread.m_generatedEntries.size(); j++)
         {
             const auto& entry = thread.m_generatedEntries[j];
+            auto& list = partsByLength[entry.restLength];
+            if (list.size() == list.capacity())
+            {
+                performance4++;
+            }
+
             partsByLength[entry.restLength].push_back(entry);
         }
 

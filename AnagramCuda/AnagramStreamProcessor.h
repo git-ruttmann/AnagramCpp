@@ -19,6 +19,7 @@ private:
     void report(int wordId, int moreResults, int moreLength);
 
     int resultCount;
+    int performance4;
     AnalyzedWord anagram;
     std::vector<std::string> m_strings;
     std::vector<std::vector<partialAnagramEntry>> partsByLength;
