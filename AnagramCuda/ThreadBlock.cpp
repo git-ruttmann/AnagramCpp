@@ -1,7 +1,7 @@
 #include "ThreadBlock.h"
 
-ThreadBlock::ThreadBlock()
-    : m_minimumWordLength(2)
+ThreadBlock::ThreadBlock(const SOptions& options)
+    : m_options(options)
 {
     m_data = NULL;
     m_finishThread = false;
@@ -27,7 +27,7 @@ ThreadBlock::~ThreadBlock() noexcept
 }
 
 ThreadBlock::ThreadBlock(ThreadBlock&& other) noexcept
-    : m_minimumWordLength(2)
+    : m_options(other.m_options)
 {
     m_data = NULL;
     m_finishThread = false;
@@ -151,7 +151,7 @@ void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<partia
             }
         }
     }
-    else if (restLength >= word.length + m_minimumWordLength)
+    else if (restLength >= word.length + m_options.MinWordLength)
     {
         for (size_t i = start; i < listSize; i++)
         {
@@ -177,7 +177,7 @@ void ThreadBlock::ProcessAllBlocks()
     const auto& word = m_word;
     const auto anagramLength = m_data->size();
 
-    for (int32_t restLength = m_minimumWordLength; restLength < anagramLength; restLength++)
+    for (int32_t restLength = m_options.MinWordLength; restLength < anagramLength; restLength++)
     {
         const auto& dataWithLength = m_data->at(restLength);
         ProcessList(m_word, m_data->at(restLength), 0);

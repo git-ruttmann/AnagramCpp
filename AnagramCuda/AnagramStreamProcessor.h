@@ -9,7 +9,7 @@
 class AnagramStreamProcessor
 {
 public:
-    AnagramStreamProcessor(const std::string& anagramText, int threadCount = 16);
+    AnagramStreamProcessor(const std::string& anagramText, const SOptions& options);
 
     void ProcessStream(std::istream& stream);
 
@@ -18,6 +18,7 @@ private:
 
     void report(int wordId, int moreResults, int moreLength);
 
+    const SOptions& m_options;
     int resultCount;
     int performance4;
     AnalyzedWord anagram;

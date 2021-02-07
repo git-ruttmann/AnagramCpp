@@ -7,13 +7,14 @@
 
 #include "AnagramStreamProcessor.h"
 
-AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, int threadCount)
+AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, const SOptions& options)
+    : m_options(options)
 {
     anagram.initAnagram(anagramText);
-    threads.reserve(threadCount);
-    for (size_t i = 0; i < threadCount; i++)
+    threads.reserve(options.ThreadCount);
+    for (size_t i = 0; i < options.ThreadCount; i++)
     {
-        threads.emplace_back(ThreadBlock());
+        threads.emplace_back(options);
     }
 
     partsByLength.resize(anagram.length);
@@ -153,12 +154,13 @@ void AnagramStreamProcessor::report(int wordId, int moreResults, int moreLength)
         moreLength = entry.previousLength;
     }
 
-    return;
-
-    for (auto it = wordIds.rbegin(); it != wordIds.rend(); ++it)
+    if (m_options.PrintResults)
     {
-        std::cout << m_strings[*it] << " ";
-    }
+        for (auto it = wordIds.rbegin(); it != wordIds.rend(); ++it)
+        {
+            std::cout << m_strings[*it] << " ";
+        }
 
-    std::cout << std::endl;
+        std::cout << std::endl;
+    }
 }

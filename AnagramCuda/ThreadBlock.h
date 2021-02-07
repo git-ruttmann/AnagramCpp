@@ -4,13 +4,14 @@
 #include <thread>
 #include <vector>
 
+#include "Options.h"
 #include "AnalyzedWord.h"
 #include "PartialAnagram.h"
 
 class ThreadBlock
 {
 public:
-    ThreadBlock();
+    ThreadBlock(const SOptions& options);
     ThreadBlock(ThreadBlock&& other) noexcept;
     ~ThreadBlock();
 
@@ -52,7 +53,8 @@ private:
     const std::vector<std::vector<partialAnagramEntry>>* m_data;
     bool m_dataReady;
     bool m_dataCompleted;
-    const int m_minimumWordLength;
+
+    const SOptions& m_options;
 
     std::mutex m_lock;
     std::condition_variable m_dataReadyCondition;
