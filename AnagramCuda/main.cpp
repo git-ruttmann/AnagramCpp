@@ -12,7 +12,7 @@ int main()
     std::ifstream infile("C:\\Users\\Ruttmann\\source\\repos\\AnagramCuda\\wordlist.txt");
 
     options.ThreadCount = std::max(2u, std::thread::hardware_concurrency());
-    options.PrintResults = true;
+    options.PrintPerformanceCounters = true;
     AnagramStreamProcessor controller("Best Secret Aschheim", options);
 //    AnagramStreamProcessor controller("Best Secret Asch");
 
