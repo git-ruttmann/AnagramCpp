@@ -1,5 +1,7 @@
 #include <iostream>
 #include <fstream>
+#include <thread>
+#include <algorithm>
 
 #include "AnagramStreamProcessor.h"
 
@@ -9,7 +11,8 @@ int main()
     //std::ifstream infile("C:\\Users\\Ruttmann\\source\\repos\\AnagramCuda\\wordlist.txt");
     std::ifstream infile("C:\\Users\\Ruttmann\\source\\repos\\AnagramCuda\\wordlist.txt");
 
-    options.ThreadCount = 8;
+    options.ThreadCount = std::max(2u, std::thread::hardware_concurrency());
+    options.PrintResults = true;
     AnagramStreamProcessor controller("Best Secret Aschheim", options);
 //    AnagramStreamProcessor controller("Best Secret Asch");
 

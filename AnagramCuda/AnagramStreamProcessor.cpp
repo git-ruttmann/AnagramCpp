@@ -58,23 +58,26 @@ void AnagramStreamProcessor::ProcessStream(std::istream& stream)
 
     std::for_each(threads.begin(), threads.end(), [](ThreadBlock& thread) { thread.TerminateThread(); });
 
-    std::cout << "1: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount1; }) << std::endl;
-    std::cout << "2: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount2; }) << std::endl;
-    std::cout << "3: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount3; }) << std::endl;
-    std::cout << "s: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount1 - block.perfcount2 - block.perfcount3; }) << std::endl;
-
-    std::cout << "t:";
-    size_t lengthSum = 0;
-    for (const auto & partialLength : partsByLength)
+    if (m_options.PrintPerformanceCounters)
     {
-        std::cout << " " << partialLength.size();
-        lengthSum += partialLength.size();
-    }
-    std::cout << " t: " << lengthSum << std::endl;
+        std::cout << "1: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount1; }) << std::endl;
+        std::cout << "2: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount2; }) << std::endl;
+        std::cout << "3: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount3; }) << std::endl;
+        std::cout << "s: " << std::accumulate(threads.begin(), threads.end(), 0, [](int sum, const ThreadBlock& block) { return sum + block.perfcount1 - block.perfcount2 - block.perfcount3; }) << std::endl;
 
-    // std::cout << "c: " << parts.size() << std::endl;
-    std::cout << "r: " << resultCount << std::endl;
-    std::cout << "p4:" << performance4 << std::endl;
+        std::cout << "t:";
+        size_t lengthSum = 0;
+        for (const auto& partialLength : partsByLength)
+        {
+            std::cout << " " << partialLength.size();
+            lengthSum += partialLength.size();
+        }
+        std::cout << " t: " << lengthSum << std::endl;
+
+        // std::cout << "c: " << parts.size() << std::endl;
+        std::cout << "r: " << resultCount << std::endl;
+        std::cout << "p4:" << performance4 << std::endl;
+    }
 }
 
 void AnagramStreamProcessor::ExecuteThreads(size_t count)
