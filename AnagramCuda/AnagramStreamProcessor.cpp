@@ -129,8 +129,7 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
         }
 
         auto& lengthData = partsByLength[thread.m_word.restLength];
-        lengthData.resize(lengthData.size() + 1);
-        lengthData.back().initFromAnalyzedWord(thread.m_word);
+        lengthData.emplace_back(thread.m_word);
 
         for (const std::vector<int> wordIds: thread.m_results)
         {

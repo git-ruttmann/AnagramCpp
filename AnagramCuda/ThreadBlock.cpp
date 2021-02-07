@@ -1,6 +1,6 @@
 #include "ThreadBlock.h"
 
-ThreadBlock::ThreadBlock(const SOptions& options, const std::vector<std::vector<partialAnagramEntry>>& data)
+ThreadBlock::ThreadBlock(const SOptions& options, const std::vector<std::vector<PartialAnagram>>& data)
     : m_options(options), m_data(data)
 {
     m_finishThread = false;
@@ -87,16 +87,16 @@ void ThreadBlock::TerminateThread()
     WaitForResult();
 }
 
-void ThreadBlock::CombineBlock(const std::vector<partialAnagramEntry>& data, size_t startOffset)
+void ThreadBlock::CombineBlock(const std::vector<PartialAnagram>& data, size_t startOffset)
 {
     ProcessList(m_word, data, startOffset);
 }
 
-inline bool EntryIsComplete(const partialAnagramEntry& entry, const AnalyzedWord& word)
+inline bool EntryIsComplete(const PartialAnagram& entry, const AnalyzedWord& word)
 {
     for (size_t i = 0; i < word.numberOfCharacterClasses; i++)
     {
-        if (entry.counts[i] != word.counts[i])
+        if (entry.remaining[i] != word.counts[i])
         {
             return false;
         }
@@ -105,11 +105,11 @@ inline bool EntryIsComplete(const partialAnagramEntry& entry, const AnalyzedWord
     return true;
 }
 
-inline bool EntryIsPart(const partialAnagramEntry& entry, const AnalyzedWord& word)
+inline bool EntryIsPart(const PartialAnagram& entry, const AnalyzedWord& word)
 {
     for (size_t i = 0; i < word.numberOfCharacterClasses; i++)
     {
-        if (entry.counts[i] < word.counts[i])
+        if (entry.remaining[i] < word.counts[i])
         {
             return false;
         }
@@ -118,7 +118,7 @@ inline bool EntryIsPart(const partialAnagramEntry& entry, const AnalyzedWord& wo
     return true;
 }
 
-void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<partialAnagramEntry>& list, size_t start)
+void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<PartialAnagram>& list, size_t start)
 {
     const auto listSize = list.size();
     if (listSize <= start)
@@ -159,14 +159,13 @@ void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<partia
             perfcount3++;
             if (EntryIsPart(entry, word))
             {
-                m_generatedEntries.resize(m_generatedEntries.size() + 1);
-                m_generatedEntries.back().joinWord(entry, word, (int)i);
+                m_generatedEntries.emplace_back(entry, word, (int)i);
             }
         }
     }
 }
 
-void ThreadBlock::AddResult(int wordId, const partialAnagramEntry& entry)
+void ThreadBlock::AddResult(int wordId, const PartialAnagram& entry)
 {
     std::vector<int> wordIds;
     wordIds.reserve(5);
@@ -203,3 +202,4 @@ void ThreadBlock::ProcessAllBlocks()
         ProcessList(m_word, dataAtLength, 0);
     }
 }
+

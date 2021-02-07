@@ -11,7 +11,7 @@
 class ThreadBlock
 {
 public:
-    ThreadBlock(const SOptions& options, const std::vector<std::vector<partialAnagramEntry>>& data);
+    ThreadBlock(const SOptions& options, const std::vector<std::vector<PartialAnagram>>& data);
     ThreadBlock(ThreadBlock&& other) noexcept;
     ~ThreadBlock();
 
@@ -24,12 +24,12 @@ public:
 
     void TerminateThread();
 
-    void CombineBlock(const std::vector<partialAnagramEntry>& data, size_t startOffset);
+    void CombineBlock(const std::vector<PartialAnagram>& data, size_t startOffset);
 
     /// <summary>
     /// new partial combinations for the current word
     /// </summary>
-    std::vector<partialAnagramEntry> m_generatedEntries;
+    std::vector<PartialAnagram> m_generatedEntries;
 
     /// <summary>
     /// indizes in data that form a valid result together with the currently scanned word
@@ -45,11 +45,11 @@ public:
 private:
     void RunThread();
     void ProcessAllBlocks();
-    void ProcessList(const AnalyzedWord& word, const std::vector<partialAnagramEntry>& list, size_t start);
+    void ProcessList(const AnalyzedWord& word, const std::vector<PartialAnagram>& list, size_t start);
 
-    void AddResult(int wordId, const partialAnagramEntry & entry);
+    void AddResult(int wordId, const PartialAnagram& entry);
 
-    const std::vector<std::vector<partialAnagramEntry>>& m_data;
+    const std::vector<std::vector<PartialAnagram>>& m_data;
     bool m_dataReady;
     bool m_dataCompleted;
 

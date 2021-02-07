@@ -2,17 +2,28 @@
 
 #include "AnalyzedWord.h"
 
-struct partialAnagramEntry
+struct PartialAnagram
 {
-    partialAnagramEntry()
+    PartialAnagram()
     {
+        doNotUseMask = 0;
+        previousEntry = -1;
+        previousLength = 0;
+        wordId = 0;
+        restLength = 0;
+        memset(remaining, 0, sizeof(remaining));
+    }
+
+    PartialAnagram(const PartialAnagram& entry, const AnalyzedWord& word, int previous)
+    {
+        joinWord(entry, word, previous);
     }
 
     /// <summary>
     /// Constructor from a singleWord
     /// </summary>
     /// <param name="word"></param>
-    partialAnagramEntry(const AnalyzedWord& word)
+    PartialAnagram(const AnalyzedWord& word)
     {
         initFromAnalyzedWord(word);
     }
@@ -40,20 +51,21 @@ struct partialAnagramEntry
     /// <summary>
     /// the counts per character
     /// </summary>
-    usedCharacterCount_t counts[possibleCharacterCount];
+    usedCharacterCount_t remaining[possibleCharacterCount];
 
     /// <summary>
-    /// total sum of characters
+    /// number of characters missing until anagram is complete
     /// </summary>
     int32_t restLength;
 
+private:
     /// <summary>
     /// copy data from an analysed word
     /// </summary>
     /// <param name="word">the word</param>
     void initFromAnalyzedWord(const AnalyzedWord& word)
     {
-        memcpy(&counts, word.remaining, sizeof(counts));
+        memcpy(&remaining, word.remaining, sizeof(remaining));
         doNotUseMask = ~word.remainingMask;
         wordId = word.wordId;
         restLength = word.restLength;
@@ -63,7 +75,7 @@ struct partialAnagramEntry
     /// <summary>
     /// join existing data with a new word
     /// </summary>
-    void joinWord(const partialAnagramEntry& entry, const AnalyzedWord& word, int previous)
+    void joinWord(const PartialAnagram& entry, const AnalyzedWord& word, int previous)
     {
         previousEntry = previous;
         previousLength = entry.restLength;
@@ -74,8 +86,8 @@ struct partialAnagramEntry
 
         for (int i = 0; i < word.numberOfCharacterClasses; i++)
         {
-            auto count = entry.counts[i] - word.counts[i];
-            counts[i] = count;
+            auto count = entry.remaining[i] - word.counts[i];
+            remaining[i] = count;
             if (count == 0)
             {
                 doNotUseMask |= i < 32 ? (1 << i) : (1 << 31);
