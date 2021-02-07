@@ -94,7 +94,7 @@ void ThreadBlock::CombineBlock(const std::vector<partialAnagramEntry>& data, siz
 
 inline bool EntryIsComplete(const partialAnagramEntry& entry, const AnalyzedWord& word)
 {
-    for (size_t i = 0; i < possibleCharacterCount; i++)
+    for (size_t i = 0; i < word.numberOfCharacterClasses; i++)
     {
         if (entry.counts[i] != word.counts[i])
         {
@@ -107,7 +107,7 @@ inline bool EntryIsComplete(const partialAnagramEntry& entry, const AnalyzedWord
 
 inline bool EntryIsPart(const partialAnagramEntry& entry, const AnalyzedWord& word)
 {
-    for (size_t i = 0; i < possibleCharacterCount; i++)
+    for (size_t i = 0; i < word.numberOfCharacterClasses; i++)
     {
         if (entry.counts[i] < word.counts[i])
         {

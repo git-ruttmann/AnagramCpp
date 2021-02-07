@@ -72,7 +72,7 @@ struct partialAnagramEntry
         wordId = word.wordId;
         restLength = entry.restLength - word.length;
 
-        for (int i = 0; i < possibleCharacterCount; i++)
+        for (int i = 0; i < word.numberOfCharacterClasses; i++)
         {
             auto count = entry.counts[i] - word.counts[i];
             counts[i] = count;

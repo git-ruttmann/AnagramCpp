@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ctype.h>
+#include <array>
 
 /// <summary>
 /// Number of possible input chars. 0-9 and A-Z
@@ -16,6 +17,70 @@ using usedCharacterCount_t = int8_t;
 /// type for the mask of existing characters
 /// </summary>
 using usedCharacterMask_t = uint32_t;
+
+struct AnalyzedAnagram
+{
+    /// <summary>
+    /// The actually used characters as bitmask
+    /// </summary>
+    usedCharacterMask_t usedMask;
+
+    /// <summary>
+    /// The usages per character
+    /// </summary>
+    usedCharacterCount_t counts[possibleCharacterCount];
+
+    /// <summary>
+    /// the length of the word
+    /// </summary>
+    int32_t length;
+
+    void initAnagram(const std::string& text)
+    {
+        memset(&counts, 0, sizeof(counts));
+        usedMask = 0;
+        length = 0;
+        usedCharacterCount = 0;
+        for (size_t i = 0; i < indexTable.size(); i++)
+        {
+            indexTable[i] = -1;
+        }
+
+        for (unsigned char c : text)
+        {
+            if (isalnum(c))
+            {
+                c = tolower(c);
+                if (indexTable[c] == -1)
+                {
+                    indexTable[c] = usedCharacterCount++;
+                }
+
+                auto ci = ToIndex(c);
+
+                length++;
+                counts[ci]++;
+
+                auto cu = std::min(ci, (char)31);
+                usedMask |= 1 << cu;
+            }
+        }
+    }
+
+    char ToIndex(char c) const
+    {
+        return indexTable[(unsigned char)tolower(c)];
+    }
+
+    int GetUsedCharacterCount() const
+    {
+        return usedCharacterCount;
+    }
+
+private:
+    std::array<char, 256> indexTable;
+    int usedCharacterCount;
+};
 
 struct AnalyzedWord
 {
@@ -55,56 +120,28 @@ struct AnalyzedWord
     usedCharacterCount_t remaining[possibleCharacterCount];
 
     /// <summary>
-    /// Check these character indices (the rest is covered by the mask)
+    /// number of different characters used (== number of used indizes in counts/remaining)
     /// </summary>
-    int checkCharacters[possibleCharacterCount];
+    int numberOfCharacterClasses;
 
-    int checkCharacterCount;
-
-    void initAnagram(const std::string& text)
+    bool initWord(const AnalyzedAnagram& anagram, const std::string& text)
     {
         memset(&counts, 0, sizeof(counts));
-        usedMask = 0;
-        length = 0;
-        checkCharacterCount = 0;
-
-        for (auto c : text)
-        {
-            if (isalnum(c))
-            {
-                length++;
-                auto ci = toIndex(c);
-                if (counts[ci] == 0)
-                {
-                    checkCharacters[checkCharacterCount++] = ci;
-                }
-
-                counts[ci]++;
-
-                auto cu = std::min(ci, (char)31);
-                usedMask |= 1 << cu;
-            }
-        }
-
-        memcpy(&remaining, counts, sizeof(counts));
-        remainingMask = usedMask;
-        restLength = length;
-    }
-
-    bool initWord(const AnalyzedWord& anagram, const std::string& text)
-    {
-        memset(&counts, 0, sizeof(counts));
-        memcpy(&remaining, anagram.remaining, sizeof(remaining));
+        memcpy(&remaining, anagram.counts, sizeof(remaining));
         remainingMask = anagram.usedMask;
         usedMask = 0;
-        checkCharacterCount = anagram.checkCharacterCount;
-        memcpy(checkCharacters, anagram.checkCharacters, sizeof(checkCharacters));
+        numberOfCharacterClasses = anagram.GetUsedCharacterCount();
         length = (int)text.size();
         restLength = anagram.length - length;
 
         for (auto c : text)
         {
-            auto ci = toIndex(c);
+            auto ci = anagram.ToIndex(c);
+            if (ci < 0)
+            {
+                return false;
+            }
+
             counts[ci]++;
 
             if (remaining[ci] == 0)
@@ -128,16 +165,5 @@ struct AnalyzedWord
         }
 
         return true;
-    }
-
-private:
-    inline char toIndex(char c)
-    {
-        if (c >= 'A')
-        {
-            return toupper(c) - 'A' + 10;
-        }
-
-        return c - '0';
     }
 };

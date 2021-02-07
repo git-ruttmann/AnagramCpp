@@ -21,7 +21,7 @@ private:
     const SOptions& m_options;
     int resultCount;
     int performance4;
-    AnalyzedWord anagram;
+    AnalyzedAnagram anagram;
     std::vector<std::string> m_strings;
     std::vector<std::vector<partialAnagramEntry>> partsByLength;
     std::vector<ThreadBlock> threads;
