@@ -14,7 +14,7 @@ AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, c
     threads.reserve(options.ThreadCount);
     for (size_t i = 0; i < options.ThreadCount; i++)
     {
-        threads.emplace_back(options);
+        threads.emplace_back(options, partsByLength);
     }
 
     partsByLength.resize(anagram.length);
@@ -90,26 +90,24 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
     // handle each word in a separate thread. splitting the array is too much overhead
     for (size_t i = 0; i < count; i++)
     {
-        auto& thread = threads[i];
-        thread.ScanBlockInThread(partsByLength);
+        threads[i].ScanBlockInThread();
     }
 
     // wait until each thread is completed, do not modify the parts during the parallel phase
-    size_t totalNew = 0;
     for (size_t i = 0; i < count; i++)
     {
-        auto& thread = threads[i];
-        thread.WaitForResult();
-        totalNew += thread.m_generatedEntries.size();
+        threads[i].WaitForResult();
     }
 
-    // each word also must be combined with the previous words from the other threads
+    // capture the number of already handled items per part array
     std::vector<size_t> handledIndizis;
+    handledIndizis.reserve(partsByLength.size());
     for (const auto& part : partsByLength)
     {
         handledIndizis.push_back(part.size());
     }
 
+    // each word also must be combined with the previous words from the other threads
     for (size_t i = 0; i < count; i++)
     {
         auto& thread = threads[i];
@@ -134,28 +132,19 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
         lengthData.resize(lengthData.size() + 1);
         lengthData.back().initFromAnalyzedWord(thread.m_word);
 
-        for (size_t j = 0; j < thread.m_resultWordId.size(); j++)
+        for (const std::vector<int> wordIds: thread.m_results)
         {
-            report(thread.m_word.wordId, thread.m_resultWordId[j], thread.m_resultWordLength[j]);
+            Report(wordIds);
         }
 
         thread.m_generatedEntries.resize(0);
-        thread.m_resultWordId.resize(0);
-        thread.m_resultWordLength.resize(0);
+        thread.m_results.resize(0);
     }
 }
 
-void AnagramStreamProcessor::report(int wordId, int moreResults, int moreLength)
+void AnagramStreamProcessor::Report(const std::vector<int> wordIds)
 {
     resultCount++;
-    std::vector<int> wordIds{ wordId };
-    while (moreResults >= 0)
-    {
-        const auto& entry = partsByLength[moreLength][moreResults];
-        wordIds.push_back(entry.wordId);
-        moreResults = entry.previousEntry;
-        moreLength = entry.previousLength;
-    }
 
     if (m_options.PrintResults)
     {

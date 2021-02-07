@@ -1,9 +1,8 @@
 #include "ThreadBlock.h"
 
-ThreadBlock::ThreadBlock(const SOptions& options)
-    : m_options(options)
+ThreadBlock::ThreadBlock(const SOptions& options, const std::vector<std::vector<partialAnagramEntry>>& data)
+    : m_options(options), m_data(data)
 {
-    m_data = NULL;
     m_finishThread = false;
     m_dataReady = false;
     m_dataCompleted = false;
@@ -18,7 +17,6 @@ ThreadBlock::~ThreadBlock() noexcept
 {
     {
         std::lock_guard guard(m_lock);
-        m_data = NULL;
         m_finishThread = true;
         m_dataReadyCondition.notify_one();
     }
@@ -27,9 +25,8 @@ ThreadBlock::~ThreadBlock() noexcept
 }
 
 ThreadBlock::ThreadBlock(ThreadBlock&& other) noexcept
-    : m_options(other.m_options)
+    : m_options(other.m_options), m_data(other.m_data)
 {
-    m_data = NULL;
     m_finishThread = false;
     m_dataReady = false;
     m_dataCompleted = false;
@@ -65,10 +62,9 @@ void ThreadBlock::RunThread()
     }
 }
 
-void ThreadBlock::ScanBlockInThread(const std::vector<std::vector<partialAnagramEntry>>& data)
+void ThreadBlock::ScanBlockInThread()
 {
     std::lock_guard guard(m_lock);
-    m_data = &data;
     m_dataReady = true;
     m_dataCompleted = false;
     m_dataReadyCondition.notify_one();
@@ -84,7 +80,6 @@ void ThreadBlock::TerminateThread()
 {
     {
         std::lock_guard guard(m_lock);
-        m_data = NULL;
         m_finishThread = true;
         m_dataReadyCondition.notify_one();
     }
@@ -136,7 +131,7 @@ void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<partia
     {
         for (size_t i = start; i < listSize; i++)
         {
-//            perfcount1++;
+            //            perfcount1++;
             const auto& entry = list[i];
             if (entry.doNotUseMask & word.usedMask)
             {
@@ -146,8 +141,7 @@ void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<partia
             perfcount2++;
             if (EntryIsComplete(entry, word))
             {
-                m_resultWordId.emplace_back((int)i);
-                m_resultWordLength.emplace_back(restLength);
+                AddResult(word.wordId, entry);
             }
         }
     }
@@ -172,14 +166,40 @@ void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<partia
     }
 }
 
+void ThreadBlock::AddResult(int wordId, const partialAnagramEntry& entry)
+{
+    std::vector<int> wordIds;
+    wordIds.reserve(5);
+    wordIds.emplace_back(wordId);
+
+    wordIds.emplace_back(entry.wordId);
+
+    auto previousEntry = entry.previousEntry;
+    auto previousLength = entry.previousLength;
+    while (previousEntry >= 0)
+    {
+        const auto& previousCombination = m_data[previousLength][previousEntry];
+        wordIds.emplace_back(previousCombination.wordId);
+        previousEntry = previousCombination.previousEntry;
+        previousLength = previousCombination.previousLength;
+    }
+
+    m_results.emplace_back(std::move(wordIds));
+}
+
 void ThreadBlock::ProcessAllBlocks()
 {
-    const auto& word = m_word;
-    const auto anagramLength = m_data->size();
+    const auto anagramLength = m_data.size();
+
+    if (m_word.restLength == 0)
+    {
+        m_results.emplace_back(std::vector<int> { m_word.wordId });
+        return;
+    }
 
     for (int32_t restLength = m_options.MinWordLength; restLength < anagramLength; restLength++)
     {
-        const auto& dataWithLength = m_data->at(restLength);
-        ProcessList(m_word, m_data->at(restLength), 0);
+        const auto& dataAtLength = m_data[restLength];
+        ProcessList(m_word, dataAtLength, 0);
     }
 }
