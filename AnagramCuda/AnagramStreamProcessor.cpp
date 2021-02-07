@@ -148,11 +148,15 @@ void AnagramStreamProcessor::Report(const std::vector<int> wordIds)
 
     if (m_options.PrintResults)
     {
+        std::string text;
+        text.reserve(anagram.length + wordIds.size());
+
         for (auto it = wordIds.rbegin(); it != wordIds.rend(); ++it)
         {
-            std::cout << m_strings[*it] << " ";
+            text.append(m_strings[*it]);
+            text.push_back(' ');
         }
 
-        std::cout << std::endl;
+        std::cout << text << std::endl;
     }
 }
