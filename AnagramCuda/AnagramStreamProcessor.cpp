@@ -24,7 +24,7 @@ AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, c
     // this is a handcrafted optimization to reduce reallocation
     for (size_t i = 2; i < anagram.length; i++)
     {
-        partsByLength[i].reserve(i < 6 ? 1000000 : (i < 10 ? 50000 : 10000));
+        partsByLength[i].data.reserve(i < 6 ? 1000000 : (i < 10 ? 50000 : 10000));
     }
 }
 
@@ -69,8 +69,8 @@ void AnagramStreamProcessor::ProcessStream(std::istream& stream)
         size_t lengthSum = 0;
         for (const auto& partialLength : partsByLength)
         {
-            std::cout << " " << partialLength.size();
-            lengthSum += partialLength.size();
+            std::cout << " " << partialLength.data.size();
+            lengthSum += partialLength.data.size();
         }
         std::cout << " t: " << lengthSum << std::endl;
 
@@ -100,11 +100,9 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
     }
 
     // capture the number of already handled items per part array
-    std::vector<size_t> handledIndizis;
-    handledIndizis.reserve(partsByLength.size());
-    for (const auto& part : partsByLength)
+    for (auto& part : partsByLength)
     {
-        handledIndizis.push_back(part.size());
+        part.processedLength = part.data.size();
     }
 
     // each word also must be combined with the previous words from the other threads
@@ -113,23 +111,23 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
         auto& thread = threads[i];
         for (size_t j = 0; j < partsByLength.size(); j++)
         {
-            thread.CombineBlock(partsByLength[j], handledIndizis[j]);
+            thread.CombineBlock(partsByLength[j]);
         }
 
         for (size_t j = 0; j < thread.m_generatedEntries.size(); j++)
         {
             const auto& entry = thread.m_generatedEntries[j];
-            auto& list = partsByLength[entry.restLength];
+            auto& list = partsByLength[entry.restLength].data;
             if (list.size() == list.capacity())
             {
                 performance4++;
             }
 
-            partsByLength[entry.restLength].push_back(entry);
+            list.push_back(entry);
         }
 
         auto& lengthData = partsByLength[thread.m_word.restLength];
-        lengthData.emplace_back(thread.m_word);
+        lengthData.data.emplace_back(thread.m_word);
 
         for (const std::vector<int> wordIds: thread.m_results)
         {

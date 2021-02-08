@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <array>
+#include <string>
 
 /// <summary>
 /// Number of possible input chars. 0-9 and A-Z
@@ -61,13 +62,13 @@ struct AnalyzedAnagram
                 length++;
                 counts[ci]++;
 
-                auto cu = std::min(ci, (char)31);
+                auto cu = std::min(ci, 31);
                 usedMask |= 1 << cu;
             }
         }
     }
 
-    char ToIndex(char c) const
+    int32_t ToIndex(char c) const
     {
         return indexTable[(unsigned char)tolower(c)];
     }
@@ -78,7 +79,7 @@ struct AnalyzedAnagram
     }
 
 private:
-    std::array<char, 256> indexTable;
+    std::array<int32_t, 256> indexTable;
     int usedCharacterCount;
 };
 
@@ -149,7 +150,7 @@ struct AnalyzedWord
                 return false;
             }
 
-            usedMask |= 1 << (std::min(ci, (char)31));
+            usedMask |= 1 << (std::min(ci, 31));
             if (remaining[ci] > 1)
             {
                 remaining[ci]--;

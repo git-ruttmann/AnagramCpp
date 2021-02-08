@@ -1,6 +1,6 @@
 #include "ThreadBlock.h"
 
-ThreadBlock::ThreadBlock(const SOptions& options, const std::vector<std::vector<PartialAnagram>>& data)
+ThreadBlock::ThreadBlock(const SOptions& options, const std::vector<SameLengthBlock>& data)
     : m_options(options), m_data(data)
 {
     m_finishThread = false;
@@ -87,9 +87,9 @@ void ThreadBlock::TerminateThread()
     WaitForResult();
 }
 
-void ThreadBlock::CombineBlock(const std::vector<PartialAnagram>& data, size_t startOffset)
+void ThreadBlock::CombineBlock(const SameLengthBlock& data)
 {
-    ProcessList(m_word, data, startOffset);
+    ProcessList(m_word, data, data.processedLength);
 }
 
 inline bool EntryIsComplete(const PartialAnagram& entry, const AnalyzedWord& word)
@@ -118,8 +118,9 @@ inline bool EntryIsPart(const PartialAnagram& entry, const AnalyzedWord& word)
     return true;
 }
 
-void ThreadBlock::ProcessList(const AnalyzedWord& word, const std::vector<PartialAnagram>& list, size_t start)
+void ThreadBlock::ProcessList(const AnalyzedWord& word, const SameLengthBlock& block, size_t start)
 {
+    const auto& list = block.data;
     const auto listSize = list.size();
     if (listSize <= start)
     {
@@ -177,7 +178,7 @@ void ThreadBlock::AddResult(int wordId, const PartialAnagram& entry)
     auto previousLength = entry.previousLength;
     while (previousEntry >= 0)
     {
-        const auto& previousCombination = m_data[previousLength][previousEntry];
+        const auto& previousCombination = m_data[previousLength].data[previousEntry];
         wordIds.emplace_back(previousCombination.wordId);
         previousEntry = previousCombination.previousEntry;
         previousLength = previousCombination.previousLength;

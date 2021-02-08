@@ -23,6 +23,6 @@ private:
     int performance4;
     AnalyzedAnagram anagram;
     std::vector<std::string> m_strings;
-    std::vector<std::vector<PartialAnagram>> partsByLength;
+    std::vector<SameLengthBlock> partsByLength;
     std::vector<ThreadBlock> threads;
 };

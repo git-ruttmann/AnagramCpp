@@ -8,10 +8,28 @@
 #include "AnalyzedWord.h"
 #include "PartialAnagram.h"
 
+struct SameLengthBlock
+{
+    /// <summary>
+    /// partial anagram combinations, all have the same length
+    /// </summary>
+    std::vector<PartialAnagram> data;
+
+    /// <summary>
+    /// number of processed entries in the parallel phase
+    /// </summary>
+    size_t processedLength;
+
+    /// <summary>
+    /// all entried per character class
+    /// </summary>
+    std::vector<std::vector<int>> perCharacterClass;
+};
+
 class ThreadBlock
 {
 public:
-    ThreadBlock(const SOptions& options, const std::vector<std::vector<PartialAnagram>>& data);
+    ThreadBlock(const SOptions& options, const std::vector<SameLengthBlock>& data);
     ThreadBlock(ThreadBlock&& other) noexcept;
     ~ThreadBlock();
 
@@ -24,7 +42,7 @@ public:
 
     void TerminateThread();
 
-    void CombineBlock(const std::vector<PartialAnagram>& data, size_t startOffset);
+    void CombineBlock(const SameLengthBlock& block);
 
     /// <summary>
     /// new partial combinations for the current word
@@ -45,11 +63,11 @@ public:
 private:
     void RunThread();
     void ProcessAllBlocks();
-    void ProcessList(const AnalyzedWord& word, const std::vector<PartialAnagram>& list, size_t start);
+    void ProcessList(const AnalyzedWord& word, const SameLengthBlock& list, size_t start);
 
     void AddResult(int wordId, const PartialAnagram& entry);
 
-    const std::vector<std::vector<PartialAnagram>>& m_data;
+    const std::vector<SameLengthBlock>& m_data;
     bool m_dataReady;
     bool m_dataCompleted;
 
