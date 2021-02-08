@@ -16,7 +16,7 @@ public:
 private:
     void ExecuteThreads(size_t count);
 
-    void Report(const std::vector<int> wordIds);
+    void Report(const std::vector<int>& wordIds);
 
     const SOptions& m_options;
     int resultCount;

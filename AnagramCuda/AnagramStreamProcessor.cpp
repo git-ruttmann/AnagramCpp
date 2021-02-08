@@ -11,11 +11,6 @@ AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, c
     : m_options(options)
 {
     anagram.initAnagram(anagramText);
-    threads.reserve(options.ThreadCount);
-    for (size_t i = 0; i < options.ThreadCount; i++)
-    {
-        threads.emplace_back(options, partsByLength);
-    }
 
     partsByLength.resize(anagram.length);
     resultCount = 0;
@@ -25,6 +20,13 @@ AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, c
     for (size_t i = 2; i < anagram.length; i++)
     {
         partsByLength[i].data.reserve(i < 6 ? 1000000 : (i < 10 ? 50000 : 10000));
+    }
+
+    // partsByLength is pre-initalized in the constructor of the thread
+    threads.reserve(options.ThreadCount);
+    for (size_t i = 0; i < options.ThreadCount; i++)
+    {
+        threads.emplace_back(options, partsByLength);
     }
 }
 
@@ -123,13 +125,13 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
                 performance4++;
             }
 
-            list.push_back(entry);
+            partsByLength[entry.restLength].AddData(entry);
         }
 
         auto& lengthData = partsByLength[thread.m_word.restLength];
-        lengthData.data.emplace_back(thread.m_word);
+        lengthData.AddData(thread.m_word);
 
-        for (const std::vector<int> wordIds: thread.m_results)
+        for (const std::vector<int>& wordIds: thread.m_results)
         {
             Report(wordIds);
         }
@@ -139,7 +141,7 @@ void AnagramStreamProcessor::ExecuteThreads(size_t count)
     }
 }
 
-void AnagramStreamProcessor::Report(const std::vector<int> wordIds)
+void AnagramStreamProcessor::Report(const std::vector<int>& wordIds)
 {
     resultCount++;
 

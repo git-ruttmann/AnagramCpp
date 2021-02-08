@@ -24,6 +24,16 @@ struct SameLengthBlock
     /// all entried per character class
     /// </summary>
     std::vector<std::vector<int>> perCharacterClass;
+
+    void AddData(const PartialAnagram& anagram)
+    {
+        data.push_back(anagram);
+    }
+
+    void AddData(const AnalyzedWord& word)
+    {
+        data.emplace_back(word);
+    }
 };
 
 class ThreadBlock
