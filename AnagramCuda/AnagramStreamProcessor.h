@@ -9,7 +9,7 @@
 class AnagramStreamProcessor
 {
 public:
-    AnagramStreamProcessor(const std::string& anagramText, const SOptions& options);
+    AnagramStreamProcessor(const SOptions& options);
 
     void ProcessStream(std::istream& stream);
 

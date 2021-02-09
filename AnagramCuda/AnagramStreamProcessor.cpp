@@ -7,10 +7,10 @@
 
 #include "AnagramStreamProcessor.h"
 
-AnagramStreamProcessor::AnagramStreamProcessor(const std::string& anagramText, const SOptions& options)
+AnagramStreamProcessor::AnagramStreamProcessor(const SOptions& options)
     : m_options(options)
 {
-    anagram.initAnagram(anagramText);
+    anagram.initAnagram(options.angramText);
 
     partsByLength.resize(anagram.length);
     resultCount = 0;
